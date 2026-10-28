@@ -1,0 +1,231 @@
+{
+  "schema": "nl10-range-trainer/v2",
+  "pack": {
+    "id": "my-rfi-pack",
+    "version": 1,
+    "name": "RFI 6-max 100 BB — TO FILL",
+    "format": {
+      "game": "NLHE",
+      "tableSize": 6,
+      "stackBb": 100,
+      "tableType": "regular"
+    },
+    "sizing": {
+      "profileId": "rfi-2.5-sb3",
+      "rfiBb": 2.5,
+      "sbRfiBb": 3,
+      "description": "Opens 2.5 BB (UTG/HJ/CO/BTN), SB raise 3 BB"
+    },
+    "sourceParameters": {
+      "site": null,
+      "stakes": null,
+      "rakePercent": null,
+      "rakeCapBb": null,
+      "noFlopNoDrop": null,
+      "notes": null
+    },
+    "source": {
+      "kind": "user",
+      "name": "TO FILL: source name",
+      "author": null,
+      "url": null,
+      "reference": null,
+      "license": null,
+      "tool": null,
+      "producedAt": null,
+      "proprietary": false
+    },
+    "transcription": {
+      "status": "unchecked",
+      "checkedBy": null,
+      "checkedAt": null,
+      "method": null
+    },
+    "strategy": {
+      "standardRule": "majority",
+      "tieBreak": null
+    },
+    "compatibilityNote": null
+  },
+  "spots": [
+    {
+      "id": "rfi-utg",
+      "name": "UTG — Open (RFI)",
+      "family": "RFI",
+      "hero": "UTG",
+      "villains": [
+        "HJ",
+        "CO",
+        "BTN",
+        "SB",
+        "BB"
+      ],
+      "history": [],
+      "actions": [
+        {
+          "id": "fold",
+          "kind": "fold",
+          "label": "Fold"
+        },
+        {
+          "id": "raise",
+          "kind": "raise",
+          "label": "Open 2.5 BB",
+          "sizeBb": 2.5
+        }
+      ],
+      "hands": {}
+    },
+    {
+      "id": "rfi-hj",
+      "name": "HJ — Open (RFI)",
+      "family": "RFI",
+      "hero": "HJ",
+      "villains": [
+        "CO",
+        "BTN",
+        "SB",
+        "BB"
+      ],
+      "history": [
+        {
+          "position": "UTG",
+          "kind": "fold"
+        }
+      ],
+      "actions": [
+        {
+          "id": "fold",
+          "kind": "fold",
+          "label": "Fold"
+        },
+        {
+          "id": "raise",
+          "kind": "raise",
+          "label": "Open 2.5 BB",
+          "sizeBb": 2.5
+        }
+      ],
+      "hands": {}
+    },
+    {
+      "id": "rfi-co",
+      "name": "CO — Open (RFI)",
+      "family": "RFI",
+      "hero": "CO",
+      "villains": [
+        "BTN",
+        "SB",
+        "BB"
+      ],
+      "history": [
+        {
+          "position": "UTG",
+          "kind": "fold"
+        },
+        {
+          "position": "HJ",
+          "kind": "fold"
+        }
+      ],
+      "actions": [
+        {
+          "id": "fold",
+          "kind": "fold",
+          "label": "Fold"
+        },
+        {
+          "id": "raise",
+          "kind": "raise",
+          "label": "Open 2.5 BB",
+          "sizeBb": 2.5
+        }
+      ],
+      "hands": {}
+    },
+    {
+      "id": "rfi-btn",
+      "name": "BTN — Open (RFI)",
+      "family": "RFI",
+      "hero": "BTN",
+      "villains": [
+        "SB",
+        "BB"
+      ],
+      "history": [
+        {
+          "position": "UTG",
+          "kind": "fold"
+        },
+        {
+          "position": "HJ",
+          "kind": "fold"
+        },
+        {
+          "position": "CO",
+          "kind": "fold"
+        }
+      ],
+      "actions": [
+        {
+          "id": "fold",
+          "kind": "fold",
+          "label": "Fold"
+        },
+        {
+          "id": "raise",
+          "kind": "raise",
+          "label": "Open 2.5 BB",
+          "sizeBb": 2.5
+        }
+      ],
+      "hands": {}
+    },
+    {
+      "id": "rfi-sb",
+      "name": "SB — Open (RFI)",
+      "family": "RFI",
+      "hero": "SB",
+      "villains": [
+        "BB"
+      ],
+      "history": [
+        {
+          "position": "UTG",
+          "kind": "fold"
+        },
+        {
+          "position": "HJ",
+          "kind": "fold"
+        },
+        {
+          "position": "CO",
+          "kind": "fold"
+        },
+        {
+          "position": "BTN",
+          "kind": "fold"
+        }
+      ],
+      "actions": [
+        {
+          "id": "fold",
+          "kind": "fold",
+          "label": "Fold"
+        },
+        {
+          "id": "limp",
+          "kind": "limp",
+          "label": "Limp"
+        },
+        {
+          "id": "raise",
+          "kind": "raise",
+          "label": "Raise 3 BB",
+          "sizeBb": 3
+        }
+      ],
+      "hands": {}
+    }
+  ]
+}

@@ -1,0 +1,151 @@
+@import 'tailwindcss';
+
+/* ==========================================================================
+   Design tokens — Cash Trainer
+   Yellow (brand) is reserved for identity and primary actions.
+   Strategy colors (act-*) are distinct and never use it.
+   ========================================================================== */
+@theme {
+  /* Neutrals */
+  --color-bg: #111316;
+  --color-surface: #1d2025;
+  --color-surface-2: #24282e;
+  --color-surface-3: #2b3037;
+  --color-border: #30343b;
+  --color-border-strong: #424852;
+  --color-text: #f4f4f5;
+  --color-muted: #9298a1;
+  --color-faint: #666c75;
+
+  /* Brand */
+  --color-brand: #ffd900;
+  --color-brand-hover: #ffe24d;
+  --color-brand-active: #e6c300;
+  --color-brand-ink: #111316;
+
+  /* Strategy actions (grid, legend, selector) */
+  --color-act-fold: #3a3f47;
+  --color-act-call: #3b7dd8;
+  --color-act-raise: #d6453d;
+  --color-act-raise-2: #9e2b25;
+  --color-act-limp: #3e9f5a;
+  --color-act-missing: #16181c;
+
+  /* Functional */
+  --color-ok: #3e9f5a;
+  --color-err: #d6453d;
+  --color-warn: #d98a2b;
+
+  /* Cards: light face, 4-color deck */
+  --color-card-face: #ececee;
+  --color-suit-s: #1a1c20;
+  --color-suit-h: #c4372f;
+  --color-suit-d: #2f6cc4;
+  --color-suit-c: #2d8a4c;
+
+  /* Typography */
+  --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --font-display: 'Barlow Condensed', 'IBM Plex Sans', ui-sans-serif, sans-serif;
+
+  --text-2xs: 10px;
+  --text-2xs--line-height: 14px;
+  --text-xs: 11px;
+  --text-xs--line-height: 16px;
+  --text-sm: 12px;
+  --text-sm--line-height: 18px;
+  --text-base: 13px;
+  --text-base--line-height: 20px;
+  --text-md: 14px;
+  --text-md--line-height: 20px;
+  --text-lg: 16px;
+  --text-lg--line-height: 24px;
+  --text-xl: 20px;
+  --text-xl--line-height: 28px;
+  --text-2xl: 28px;
+  --text-2xl--line-height: 32px;
+
+  /* Spacing: 4px base (p-1 = 4px, p-2 = 8px…) */
+  --spacing: 4px;
+
+  /* Radii */
+  --radius-btn: 5px;
+  --radius-card: 6px;
+  --radius-cell: 2px;
+  --radius-game: 6px;
+
+  /* Control heights */
+  --size-control: 40px;
+  --size-control-sm: 32px;
+  --size-touch: 44px;
+
+  /* Shadows: a single subtle one, for floating surfaces */
+  --shadow-float: 0 4px 16px rgb(0 0 0 / 0.35);
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: var(--text-base--line-height);
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: var(--color-brand);
+    color: var(--color-brand-ink);
+  }
+  .num {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Hand not provided: hatching, never confused with a fold. */
+.cell-missing {
+  background-color: var(--color-act-missing);
+  background-image: repeating-linear-gradient(135deg, transparent 0 3px, rgb(255 255 255 / 0.05) 3px 4px);
+}
+
+/* ==========================================================================
+   Main menu ("game" direction)
+   ========================================================================== */
+@keyframes menu-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+.menu-in {
+  animation: menu-in 260ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation-delay: calc(var(--i, 0) * 45ms);
+}
+@keyframes deal-in {
+  from { opacity: 0; transform: translateY(-18px) rotate(var(--r, 0deg)) scale(0.96); }
+  to { opacity: 1; transform: rotate(var(--r, 0deg)); }
+}
+.deal-in {
+  animation: deal-in 220ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+@keyframes pop-in {
+  from { opacity: 0; transform: scale(0.94); }
+  to { opacity: 1; transform: none; }
+}
+.pop-in { animation: pop-in 160ms cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+.rise-in { animation: rise-in 200ms cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+@media (prefers-reduced-motion: reduce) {
+  .menu-in, .deal-in, .pop-in, .rise-in { animation: none; }
+}

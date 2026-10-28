@@ -1,0 +1,70 @@
+# Range packs (schema `nl10-range-trainer/v2`)
+
+A **pack** groups spots that come from **one source** with **one sizing profile** and **one set of source
+parameters**. Spots cannot override pack-level parameters, so ranges built on different rake models or sizings can
+never be mixed inside a pack.
+
+No strategic data is shipped in this folder. `templates/` only contains empty structures.
+
+## Folder layout
+
+```
+data/ranges/
+├── README.md
+├── templates/
+│   ├── rfi-pack.template.json     # the 5 RFI spots, declared, with NO hands
+│   └── rfi-{utg,hj,co,btn,sb}.template.csv   # 169 empty rows each
+└── packs/                         # real packs, ONLY if their license allows versioning
+```
+
+## Three separate notions
+
+| Field | Meaning | Who sets it |
+|---|---|---|
+| `pack.sourceParameters` | What the **source** assumed: site, stakes, rake %, cap (BB), no flop no drop. `null` = unknown. Never copied from the target. | You, from the source documentation |
+| `pack.transcription` | Whether the **data entry** was checked against the source (`unchecked` / `checked`, by whom, when, how). Says nothing about strategic quality. | You, after a manual comparison |
+| Target fit | Computed by the app: each source parameter vs the target (PokerStars.com NL10, 6-max, 100 BB, rake 5 %, cap $1 = 10 BB, no flop no drop, opens 2.5 / SB 3 BB). `compatible` only when every parameter is declared **and** equal. | Nobody — computed, never declared |
+
+"Compatible" is a parameter check, **not** a claim that the ranges are optimal for PokerStars NL10. Use the optional
+`pack.compatibilityNote` to document a justification if you have one.
+
+## Missing data vs fold
+
+- A hand absent from `hands` (or an empty CSV row) is **not provided**: never shown as a fold, never quizzed.
+- A fold is explicit: `"72o": { "fold": 1 }` (CSV: `72o,1,`).
+- `transcription.status = "checked"` requires all 169 hands in every spot, folds included.
+
+## Standard and Pro
+
+Hands keep the source frequencies exactly (`"A5s": { "raise": 0.6, "fold": 0.4 }`).
+Standard mode uses the **majority action**; ties are broken by `pack.strategy.tieBreak` (an ordered list of action
+ids) or, when `null`, by the order of `actions`. The original frequencies are preserved for the future Pro mode and
+exported unchanged.
+
+## RFI rules enforced
+
+- History = folds from every position before hero; villains = every position after hero; no BB open.
+- Actions: one `fold`; `raise` size must equal `pack.sizing.rfiBb` (UTG/HJ/CO/BTN) or `sbRfiBb` (SB).
+- `limp` only for the SB: the SB template has a `limp` column; `merge` drops the action when no hand uses it.
+- No `call` / `check` in an unopened pot.
+
+## Importing verified ranges
+
+1. **Get the data from a source you have the rights to use** (your own solver work, a coach who allows it, a chart
+   under a permissive license). Nothing is fetched automatically from third-party sites.
+2. **Fill the hands**, one of:
+   - CSV templates in a spreadsheet (one row per hand, frequencies 0–1), then
+     `npm run ranges -- merge data/ranges/templates/rfi-pack.template.json rfi-utg=utg.csv rfi-hj=hj.csv … --out my-pack.json`
+     (only the spots you pass are kept, so a pack can start with a single position);
+   - the JSON template directly;
+   - the in-app editor (Ranges → Edit), then export.
+3. **Fill the header**: `id`, `name`, `source` (name, url or reference, license, tool, date, `proprietary`), and
+   `sourceParameters` with what the source states — `null` for anything unknown.
+4. **Check**: `npm run ranges -- check my-pack.json` (coverage, sums, actions, sizing, RFI rules, target fit).
+5. **Import** in the app: Settings → Ranges → Import (proprietary packs require confirming authorization).
+   Demo spots covering the same situations are then hidden from training by default (Settings → Training to show them).
+6. **Verify the transcription**: compare every grid with the source in the Range Viewer, then set
+   `transcription` to `checked` with `checkedBy`, `checkedAt` (YYYY-MM-DD) and `method`, bump `version`, re-check and
+   re-import. `npm run ranges -- diff old.json new.json` lists every hand that changed.
+7. **Versioning**: commit the pack under `packs/` only if its license allows it; otherwise keep it local (the app
+   stores it in the browser; Settings → Ranges → *Pack* exports it again with its original frequencies).
