@@ -1,6 +1,5 @@
-import { actionColor } from '../engine/actions';
 import { ALL_HANDS, combosPerKind, handKind, type HandClass } from '../engine/hands';
-import type { Position } from '../engine/positions';
+import { POSITIONS, type Position } from '../engine/positions';
 import { pick, type Rng } from '../engine/random';
 import type { RangeSpot } from '../ranges/types';
 
@@ -25,15 +24,37 @@ export function drawGuessSpot(spots: readonly RangeSpot[], rng: Rng, previous?: 
   return pick(fresh.length ? fresh : spots, rng);
 }
 
-/** Hands the villain puts money in with (any non-fold action: open, or limp from the SB). */
+/** The villain's open action (the SB's raise, not its limp). */
+export function openAction(spot: RangeSpot) {
+  const a = spot.actions.find((x) => x.kind === 'raise');
+  if (!a) throw new Error(`${spot.id}: no open action`);
+  return a;
+}
+
+/** Hands the villain opens (Standard view: the open is the hand's main action). */
 export function playedHands(spot: RangeSpot): Set<HandClass> {
-  const kinds = new Map(spot.actions.map((a) => [a.id, a.kind]));
-  return new Set(
-    ALL_HANDS.filter((h) => {
-      const s = spot.hands[h];
-      return !!s && Object.entries(s).some(([id, f]) => f > 0 && actionColor(kinds.get(id) ?? 'fold') !== 'fold');
-    }),
-  );
+  const open = openAction(spot).id;
+  return new Set(ALL_HANDS.filter((h) => (spot.hands[h]?.[open] ?? 0) > 0));
+}
+
+/**
+ * The same situation seen from the BB: villain opened, everyone else folded to you.
+ * Used to draw the table; the range to read stays the villain's RFI range.
+ */
+export function observerSpot(spot: RangeSpot): RangeSpot {
+  const after = POSITIONS.slice(POSITIONS.indexOf(spot.hero) + 1, POSITIONS.indexOf('BB'));
+  return {
+    ...spot,
+    id: `${spot.id}@bb`,
+    family: 'VS_OPEN',
+    hero: 'BB',
+    villains: [spot.hero],
+    history: [
+      ...spot.history,
+      { position: spot.hero, kind: 'raise', sizeBb: openAction(spot).sizeBb },
+      ...after.map((position) => ({ position, kind: 'fold' as const })),
+    ],
+  };
 }
 
 export type GuessCell = 'hit' | 'missed' | 'extra' | 'fold';

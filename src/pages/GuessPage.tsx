@@ -1,24 +1,28 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { Panel } from '../components/Card';
 import { BigActionButton, GameButton } from '../components/GameButton';
+import { Icon } from '../components/Icon';
 import { PageHeader } from '../components/Layout';
+import { Modal } from '../components/Modal';
+import { PokerTable } from '../components/PokerTable';
 import { Legend, RangeGrid } from '../components/RangeGrid';
 import { ToggleGroup } from '../components/Tabs';
 import { ALL_HANDS, type HandClass } from '../engine/hands';
-import { POSITIONS, POSITION_NAMES, type Position } from '../engine/positions';
+import { POSITIONS, type Position } from '../engine/positions';
 import { cryptoRng } from '../engine/random';
-import { drawGuessSpot, guessableSpots, rangePct, scoreGuess, type GuessCell } from '../quiz/rangeGuess';
+import { drawGuessSpot, guessableSpots, observerSpot, openAction, rangePct, scoreGuess, type GuessCell, type GuessResult } from '../quiz/rangeGuess';
 import { formatPercent } from '../ranges/analysis';
+import { potBeforeHero } from '../ranges/describe';
 import type { ActionOption, RangeSpot } from '../ranges/types';
 import { useStore } from '../state/store';
+import { cx } from '../ui/cx';
 import { useLocalSetting } from '../ui/useLocalSetting';
 
 const OPENERS: Position[] = POSITIONS.filter((p) => p !== 'BB');
 
 const PAINT_ACTIONS: ActionOption[] = [
   { id: 'fold', kind: 'fold', label: 'Fold' },
-  { id: 'in', kind: 'raise', label: 'Your range' },
+  { id: 'in', kind: 'raise', label: 'Your read' },
 ];
 
 const DIFF_ACTIONS: ActionOption[] = [
@@ -34,10 +38,15 @@ const DIFF_COLORS: Record<GuessCell, string> = {
   fold: 'var(--color-act-fold)',
 };
 
-/** What the villain does with the hands to paint ("Open 2.5 BB", "Limp / Raise 3 BB"). */
-function openText(spot: RangeSpot): string {
-  return spot.actions.filter((a) => a.kind !== 'fold').map((a) => a.label).join(' / ');
-}
+type Tone = 'ok' | 'warn' | 'err';
+const matchTone = (m: number): Tone => (m >= 0.8 ? 'ok' : m >= 0.6 ? 'warn' : 'err');
+const TONE_TEXT: Record<Tone, string> = { ok: 'text-ok', warn: 'text-warn', err: 'text-err' };
+const TONE_STAMP: Record<Tone, string> = {
+  ok: 'text-ok border-ok bg-ok/10',
+  warn: 'text-warn border-warn bg-warn/10',
+  err: 'text-err border-err bg-err/10',
+};
+const TONE_EDGE: Record<Tone, string> = { ok: 'border-l-ok', warn: 'border-l-warn', err: 'border-l-err' };
 
 export function GuessPage() {
   const { spots } = useStore();
@@ -46,8 +55,11 @@ export function GuessPage() {
   const [spotId, setSpotId] = useState<string | null>(null);
   const [guess, setGuess] = useState<Set<HandClass>>(() => new Set());
   const [revealed, setRevealed] = useState(false);
+  const [showSetup, setShowSetup] = useState(false);
+  const [matches, setMatches] = useState<number[]>([]);
 
   const spot = pool.find((s) => s.id === spotId) ?? null;
+  const table = useMemo(() => spot && observerSpot(spot), [spot]);
 
   const next = useCallback(() => {
     if (!pool.length) return;
@@ -84,16 +96,24 @@ export function GuessPage() {
 
   const result = useMemo(() => (spot && revealed ? scoreGuess(spot, guess) : null), [spot, revealed, guess]);
 
+  const check = useCallback(() => {
+    if (!spot || revealed) return;
+    setRevealed(true);
+    setMatches((m) => [...m, scoreGuess(spot, guess).match]);
+  }, [spot, revealed, guess]);
+
   // Enter = check, then next spot.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Enter' || (e.target as HTMLElement).closest('input, textarea, select, button, a')) return;
+      if (showSetup || e.key !== 'Enter' || (e.target as HTMLElement).closest('input, textarea, select, button, a')) return;
+      // Otherwise the autofocused "Next spot" button would also receive this Enter and skip the result.
+      e.preventDefault();
       if (revealed) next();
-      else setRevealed(true);
+      else check();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [revealed, next]);
+  }, [revealed, next, check, showSetup]);
 
   const paintSpot = useMemo<RangeSpot | null>(
     () => spot && { ...spot, id: 'guess', actions: PAINT_ACTIONS, hands: Object.fromEntries(ALL_HANDS.map((h) => [h, { [guess.has(h) ? 'in' : 'fold']: 1 }])) },
@@ -103,101 +123,132 @@ export function GuessPage() {
     () => spot && result && { ...spot, id: 'guess-diff', actions: DIFF_ACTIONS, hands: Object.fromEntries(ALL_HANDS.map((h) => [h, { [result.cells[h]!]: 1 }])) },
     [spot, result],
   );
+  const average = matches.length ? matches.reduce((a, b) => a + b, 0) / matches.length : 0;
 
   return (
     <div>
-      <PageHeader title="Read the range" meta="Villain opens: paint the range you put them on" />
-      <div className="max-w-[1240px] mx-auto px-4 md:px-8 py-5 space-y-5">
-        <ToggleGroup label="Villain position" items={OPENERS.map((p) => ({ id: p, label: p }))} value={heroes} onChange={setHeroes} />
+      <PageHeader title="Read the range" meta={<span className="num">{matches.length} spots · {Math.round(average * 100)}% avg match</span>}>
+        <GameButton onClick={() => setShowSetup(true)} aria-label="Villain positions" className="px-3">
+          <Icon name="settings" size={18} />
+          <span className="hidden sm:inline">Setup</span>
+        </GameButton>
+      </PageHeader>
 
-        {!spot || !paintSpot ? (
-          <p className="text-sm text-muted">
-            No complete opening range for these positions.{' '}
-            <Link to="/settings?tab=library" className="underline underline-offset-2 hover:text-text">Manage ranges</Link>
-          </p>
+      {showSetup && (
+        <Modal title="Villain positions" onClose={() => setShowSetup(false)}
+          footer={
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-muted num">{pool.length} opening range{pool.length === 1 ? '' : 's'}</span>
+              <BigActionButton label="Done" className="ml-auto h-12 sm:h-12 px-6" onClick={() => setShowSetup(false)} />
+            </div>
+          }>
+          <ToggleGroup label="Villain opens from" items={OPENERS.map((p) => ({ id: p, label: p }))} value={heroes} onChange={setHeroes} />
+        </Modal>
+      )}
+
+      <div className="max-w-[1280px] mx-auto px-4 md:px-8 py-4 md:py-6">
+        {!spot || !table || !paintSpot ? (
+          <div className="py-16 text-center space-y-4">
+            <p className="font-display font-bold text-2xl uppercase tracking-[0.04em]">No opening range to read</p>
+            <p className="text-muted">Pick other villain positions, or import complete opening ranges.</p>
+            <BigActionButton label="Open setup" onClick={() => setShowSetup(true)} />
+          </div>
         ) : (
-          <div className="grid gap-5 lg:grid-cols-[minmax(0,620px)_minmax(0,1fr)] items-start">
-            <section className="min-w-0 space-y-3" aria-label="Your estimate">
-              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                <h2 className="font-display font-bold text-xl uppercase tracking-[0.04em]">Villain {spot.hero}</h2>
-                <span className="text-sm text-muted">
-                  {spot.history.length ? 'Folded to the' : 'First to act,'} {POSITION_NAMES[spot.hero]}, who plays: {openText(spot)}
-                </span>
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_480px] items-start">
+            <section className="min-w-0 space-y-4" aria-label="Current spot">
+              <PokerTable spot={table} pot={potBeforeHero(table)} center={result ? <MatchStamp match={result.match} /> : <ReadStamp />} />
+
+              <div className="text-center -mt-1">
+                <div className="font-display font-extrabold text-[32px] sm:text-[40px] leading-none tracking-[0.02em] uppercase">
+                  {spot.hero} <span className="text-act-raise">{openAction(spot).label}</span>
+                </div>
+                <p className="mt-1.5 text-sm sm:text-md text-muted">
+                  <span className="text-text">Folded to {spot.hero}, who raises</span> — {result ? 'here is how your read compares' : 'paint the range you put them on'}
+                </p>
               </div>
-              {result && diffSpot ? (
-                <>
-                  <RangeGrid spot={diffSpot} colors={DIFF_COLORS} />
-                  <ul className="flex flex-wrap gap-x-4 gap-y-1.5 text-sm">
-                    {DIFF_ACTIONS.filter((a) => a.id !== 'fold').map((a) => (
-                      <li key={a.id} className="flex items-center gap-1.5">
-                        <span className="w-2.5 h-2.5 rounded-[1px]" style={{ background: DIFF_COLORS[a.id as GuessCell] }} />
-                        <span className="text-text">{a.label}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              ) : (
-                <>
-                  <RangeGrid spot={paintSpot} onPaint={onPaint} />
-                  <p className="text-sm text-muted">Tap or drag over the grid to add hands; start on a selected hand to remove.</p>
-                </>
-              )}
-              <div className="flex flex-wrap items-center gap-3">
-                {revealed ? (
-                  <BigActionButton label="Next spot" hint="↵" onClick={next} />
-                ) : (
-                  <>
-                    <BigActionButton label="Check" hint="↵" onClick={() => setRevealed(true)} />
-                    <GameButton onClick={() => setGuess(new Set())} disabled={!guess.size}>Clear</GameButton>
-                  </>
-                )}
-                <span className="num text-sm text-muted">Your range {formatPercent(rangePct(guess))}</span>
-              </div>
+
+              {result && <ResultPanel spot={spot} result={result} onNext={next} />}
             </section>
 
-            <div className="space-y-4 min-w-0">
-              {result ? (
-                <>
-                  <Panel title="Result">
-                    <div className="grid grid-cols-3 gap-3">
-                      <div>
-                        <div className="text-2xs uppercase tracking-[0.12em] text-faint">Match</div>
-                        <div className="num text-3xl text-text mt-0.5">{Math.round(result.match * 100)}%</div>
-                      </div>
-                      <div>
-                        <div className="text-2xs uppercase tracking-[0.12em] text-faint">Missed</div>
-                        <div className="num text-lg text-warn mt-1">{result.missedCombos} combos</div>
-                      </div>
-                      <div>
-                        <div className="text-2xs uppercase tracking-[0.12em] text-faint">Too wide</div>
-                        <div className="num text-lg text-err mt-1">{result.extraCombos} combos</div>
-                      </div>
+            <aside className="min-w-0 space-y-4">
+              <Panel title={result ? 'Your read vs the range' : 'Your read'} meta={<span className="num">{formatPercent(rangePct(guess))} of hands</span>}>
+                {result && diffSpot ? (
+                  <>
+                    <RangeGrid spot={diffSpot} colors={DIFF_COLORS} />
+                    <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-sm">
+                      {(['hit', 'missed', 'extra'] as const).map((id) => (
+                        <li key={id} className="flex items-center gap-1.5">
+                          <span className="w-2.5 h-2.5 rounded-[1px]" style={{ background: DIFF_COLORS[id] }} />
+                          <span className="text-text">{DIFF_ACTIONS.find((a) => a.id === id)!.label}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                ) : (
+                  <>
+                    <RangeGrid spot={paintSpot} onPaint={onPaint} />
+                    <p className="mt-3 text-sm text-muted">Tap or drag to add hands; start on a painted hand to erase.</p>
+                    <div className="mt-3 flex items-center gap-3">
+                      <BigActionButton label="Check" hint="↵" className="flex-1" onClick={check} />
+                      <GameButton onClick={() => setGuess(new Set())} disabled={!guess.size}>Clear</GameButton>
                     </div>
-                    <p className="mt-3 text-sm text-muted">
-                      You put {spot.hero} on <span className="num text-text">{formatPercent(result.guessedPct)}</span> of hands; the range plays{' '}
-                      <span className="num text-text">{formatPercent(result.actualPct)}</span>. Match = combos in both ranges ÷ combos in either.
-                    </p>
-                  </Panel>
-                  <Panel title="Actual range" meta={formatPercent(result.actualPct)}>
-                    <RangeGrid spot={spot} />
-                    <div className="mt-3">
-                      <Legend spot={spot} />
-                    </div>
-                    <p className="mt-2 text-xs text-faint">Mixed hands count with their most frequent action.</p>
-                  </Panel>
-                </>
-              ) : (
-                <Panel title="How it works">
-                  <p className="text-sm text-muted">
-                    Paint every hand {spot.hero} puts in the pot here{spot.hero === 'SB' ? ' (raises and limps)' : ''}, then check. The comparison shows hands
-                    you got right, hands you missed and hands that are too wide.
-                  </p>
+                  </>
+                )}
+              </Panel>
+              {result && (
+                <Panel title="Actual range" meta={<span className="num">{formatPercent(result.actualPct)} of hands</span>}>
+                  <RangeGrid spot={spot} />
+                  <div className="mt-3">
+                    <Legend spot={spot} />
+                  </div>
                 </Panel>
               )}
-            </div>
+            </aside>
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function ReadStamp() {
+  return (
+    <div className="mt-2 font-display font-extrabold text-[22px] sm:text-[28px] leading-none uppercase tracking-[0.08em] text-muted" aria-hidden>
+      Range ?
+    </div>
+  );
+}
+
+function MatchStamp({ match }: { match: number }) {
+  return (
+    <div className="pop-in mt-2" aria-hidden>
+      <div className={cx('inline-block px-3 py-1 rounded-btn border-2 font-display font-extrabold text-[22px] sm:text-[28px] leading-none uppercase tracking-[0.08em] rotate-[-3deg]', TONE_STAMP[matchTone(match)])}>
+        <span className="num">{Math.round(match * 100)}%</span> match
+      </div>
+    </div>
+  );
+}
+
+function ResultPanel({ spot, result, onNext }: { spot: RangeSpot; result: GuessResult; onNext: () => void }) {
+  const tone = matchTone(result.match);
+  return (
+    <div className="rise-in" aria-live="polite">
+      <div className="max-lg:sticky max-lg:bottom-0 max-lg:z-30 max-lg:-mx-4 max-lg:px-4 max-lg:py-3 max-lg:bg-bg/95 max-lg:border-t max-lg:border-border flex items-center gap-4">
+        <span className={cx('font-display font-extrabold text-[26px] uppercase tracking-[0.06em] leading-none', TONE_TEXT[tone])}>
+          {tone === 'ok' ? 'Good read' : tone === 'warn' ? 'Close' : 'Off'}
+        </span>
+        <BigActionButton label="Next spot" hint="↵" className="ml-auto flex-1 sm:flex-none sm:min-w-[260px]" onClick={onNext} autoFocus />
+      </div>
+      <ul className={cx('mt-3 rounded-card border border-border bg-surface p-4 space-y-1.5 text-sm text-muted border-l-4', TONE_EDGE[tone])}>
+        <li className="text-text font-medium">
+          You read {spot.hero} on <span className="num">{formatPercent(result.guessedPct)}</span> of hands; they raise{' '}
+          <span className="num">{formatPercent(result.actualPct)}</span>.
+        </li>
+        <li>
+          <span className="text-warn num">{result.missedCombos}</span> combos missed · <span className="text-err num">{result.extraCombos}</span> combos too wide.
+        </li>
+        <li>Match = combos in both ranges ÷ combos in either. Mixed hands count with their most frequent action.</li>
+      </ul>
     </div>
   );
 }

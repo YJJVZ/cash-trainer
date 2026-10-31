@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { seededRng } from '../engine/random';
 import { BUNDLED_SPOTS } from '../ranges/bundled';
-import { drawGuessSpot, guessableSpots, playedHands, rangePct, scoreGuess } from './rangeGuess';
+import { drawGuessSpot, guessableSpots, observerSpot, playedHands, rangePct, scoreGuess } from './rangeGuess';
 
 const byHero = (hero: string) => guessableSpots(BUNDLED_SPOTS).find((s) => s.hero === hero)!;
 
@@ -11,11 +11,18 @@ describe('read the range', () => {
     expect(guessableSpots(BUNDLED_SPOTS, ['CO']).map((s) => s.hero)).toEqual(['CO']);
   });
 
-  it('the SB range includes limps', () => {
+  it('the SB range is its raising range, limps excluded', () => {
     const sb = playedHands(byHero('SB'));
     expect(sb.has('AA')).toBe(true); // raise
-    expect(sb.has('K9o')).toBe(true); // limp
+    expect(sb.has('K9o')).toBe(false); // limp
     expect(sb.has('72o')).toBe(false);
+  });
+
+  it('the table is seen from the BB, after the villain open and folds behind', () => {
+    const t = observerSpot(byHero('CO'));
+    expect(t.hero).toBe('BB');
+    expect(t.history.map((h) => `${h.position}:${h.kind}`)).toEqual(['UTG:fold', 'HJ:fold', 'CO:raise', 'BTN:fold', 'SB:fold']);
+    expect(t.history[2]!.sizeBb).toBe(2.5);
   });
 
   it('a perfect guess scores 1', () => {
