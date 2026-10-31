@@ -8,7 +8,7 @@ import { TrainingSetupForm, useTrainingConfig } from '../components/TrainingSetu
 import { analyzeSpot } from '../ranges/analysis';
 import { checkConsistency } from '../ranges/consistency';
 import { trainingSpots } from '../ranges/coverage';
-import { DEMO_SPOTS, isDemoSpot } from '../ranges/demo/demoRanges';
+import { BUNDLED_SPOTS, isBundledSpot } from '../ranges/bundled';
 import { exportJson } from '../ranges/io';
 import { eligibleSpots } from '../quiz/engine';
 import { useStore } from '../state/store';
@@ -41,7 +41,7 @@ export function SettingsPage() {
 function TrainingTab() {
   const { spots } = useStore();
   const [config, setConfig] = useTrainingConfig();
-  const pool = eligibleSpots(trainingSpots(spots, config.showCoveredDemos), config);
+  const pool = eligibleSpots(trainingSpots(spots, config.showCoveredDefaults), config);
   return (
     <div className="max-w-[800px] mx-auto px-4 md:px-8 py-6">
       <Panel title="What to train" meta={`${pool.length} eligible spot${pool.length === 1 ? '' : 's'}`}>
@@ -52,19 +52,19 @@ function TrainingTab() {
 }
 
 function DataTab() {
-  const { spots, answers, srs, persistent, resetStats, restoreDemo } = useStore();
+  const { spots, answers, srs, persistent, resetStats, restoreDefaults } = useStore();
   const [confirmReset, setConfirmReset] = useState(false);
   const consistency = useMemo(() => checkConsistency(spots), [spots]);
-  const demoCount = spots.filter(isDemoSpot).length;
+  const defaultCount = spots.filter(isBundledSpot).length;
   const incomplete = spots.filter((s) => analyzeSpot(s).missingHands.length > 0).length;
-  const demoMissing = DEMO_SPOTS.some((d) => !spots.some((s) => s.id === d.id));
+  const defaultsMissing = BUNDLED_SPOTS.some((d) => !spots.some((s) => s.id === d.id));
 
   return (
     <div className="max-w-[800px] mx-auto px-4 md:px-8 py-6 space-y-5">
       <Panel title="Library" meta={`${spots.length} spots`} flush>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-border">
           <div className="bg-surface p-4"><Stat label="Spots" value={spots.length} /></div>
-          <div className="bg-surface p-4"><Stat label="Fictional demo" value={demoCount} /></div>
+          <div className="bg-surface p-4"><Stat label="Estimated defaults" value={defaultCount} /></div>
           <div className="bg-surface p-4"><Stat label="Verified" value={spots.filter((s) => s.verification === 'verified').length} /></div>
           <div className="bg-surface p-4"><Stat label="Incomplete" value={incomplete} sub="hands not provided" /></div>
         </div>
@@ -78,7 +78,7 @@ function DataTab() {
             onClick={() => downloadText(`cash-trainer-${new Date().toISOString().slice(0, 10)}.json`, exportJson(spots, 'Cash Trainer'), 'application/json')}>
             Export all ranges (JSON)
           </Button>
-          {demoMissing && <Button onClick={() => void restoreDemo()}>Restore demo spots</Button>}
+          {defaultsMissing && <Button onClick={() => void restoreDefaults()}>Restore default spots</Button>}
         </div>
       </Panel>
 
@@ -97,10 +97,11 @@ function DataTab() {
         )}
       </Panel>
 
-      <Panel title="About" actions={demoCount > 0 ? <Badge tone="demo">Fictional demo</Badge> : undefined}>
+      <Panel title="About" actions={defaultCount > 0 ? <Badge tone="warn">Estimated ranges</Badge> : undefined}>
         <p className="text-sm text-muted">
-          Cash Trainer — preflop range training for NLHE 6-max, 100 BB. The bundled demo ranges are generated from the Chen formula
-          with arbitrary thresholds: they are not GTO and must not be used in real games. Import ranges you have the rights to.
+          Cash Trainer — preflop range training for NLHE 6-max, 100 BB. The bundled default ranges are estimates
+          synthesized from publicly discussed solver-based strategies: they are not solver output and have not been verified.
+          Import ranges you have the rights to; they take precedence in training.
         </p>
       </Panel>
     </div>

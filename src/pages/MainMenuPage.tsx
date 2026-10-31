@@ -2,7 +2,7 @@ import { useEffect, useMemo, type CSSProperties } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { MenuButton, PlayButton } from '../components/GameButton';
 import { GRID } from '../engine/hands';
-import { isDemoSpot } from '../ranges/demo/demoRanges';
+import { isBundledSpot } from '../ranges/bundled';
 import type { RangeSpot } from '../ranges/types';
 import { useStore } from '../state/store';
 import { currentStreak, tally } from '../stats/aggregate';
@@ -41,7 +41,7 @@ export function MainMenuPage() {
   const streak = useMemo(() => currentStreak(answers), [answers]);
   const due = dueItems(srs, Date.now()).length;
   const toRework = srs.filter((i) => i.box < MAX_BOX).length;
-  const demoOnly = spots.length > 0 && spots.every(isDemoSpot);
+  const defaultsOnly = spots.length > 0 && spots.every(isBundledSpot);
   const backdrop = spots.find((s) => s.family === 'RFI' && s.hero === 'BTN' && s.mode === 'standard') ?? spots[0];
 
   // Enter = Play (when no button has focus)
@@ -118,13 +118,13 @@ export function MainMenuPage() {
         </main>
 
         <footer className="menu-in w-full max-w-[440px] mx-auto text-center text-xs text-faint" style={stagger(7)}>
-          {demoOnly ? (
+          {defaultsOnly ? (
             <p>
-              <span className="text-warn">Fictional demo ranges.</span>{' '}
+              <span className="text-warn">Estimated default ranges.</span>{' '}
               <Link to="/settings?tab=library" className="underline underline-offset-2 hover:text-muted">Import your ranges</Link>
             </p>
           ) : (
-            <p>{spots.filter((s) => !isDemoSpot(s)).length} personal spots · saved locally</p>
+            <p>{spots.filter((s) => !isBundledSpot(s)).length} personal spots · saved locally</p>
           )}
         </footer>
       </div>

@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { DEMO_SPOTS } from './demo/demoRanges';
+import { BUNDLED_SPOTS } from './bundled';
 import { clearAll, editableInPlace, fillMissing, paintHands, uniqueId, userCopy } from './edit';
 import { analyzeSpot } from './analysis';
 import { validateSpot } from './validation';
 
-const demo = DEMO_SPOTS.find((s) => s.id === 'demo-btn-rfi')!;
+const demo = BUNDLED_SPOTS.find((s) => s.id === 'estimate-6max-100bb:rfi-btn')!;
 
 describe('range editing', () => {
   it('paints hands with a single action', () => {
@@ -31,8 +31,8 @@ describe('range editing', () => {
     expect(analyzeSpot(s).missingHands).toHaveLength(0);
   });
 
-  it('a copy of a demo spot is a user, unverified, valid spot with a fresh id', () => {
-    const taken = new Set(DEMO_SPOTS.map((s) => s.id));
+  it('a copy of a default spot is a user, unverified, valid spot with a fresh id', () => {
+    const taken = new Set(BUNDLED_SPOTS.map((s) => s.id));
     const c = userCopy(demo, taken);
     expect(c.id).not.toBe(demo.id);
     expect(taken.has(c.id)).toBe(false);

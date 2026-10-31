@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Evaluation, Question } from '../quiz/engine';
 import { actionLabel } from '../ranges/describe';
-import { DEMO_SPOTS, DEMO_VERSION, isDemoSpot } from '../ranges/demo/demoRanges';
+import { BUNDLED_SPOTS, BUNDLED_VERSION, isBundledSpot } from '../ranges/bundled';
 import type { RangeSpot } from '../ranges/types';
 import { srsKey, updateSrs, type SrsItem } from '../stats/srs';
 import type { AnswerRecord } from '../stats/types';
@@ -19,7 +19,7 @@ interface Store {
   recordAnswer(q: Question, spot: RangeSpot, ev: Evaluation): Promise<AnswerRecord>;
   saveSpots(spots: RangeSpot[]): Promise<void>;
   deleteSpots(ids: string[]): Promise<void>;
-  restoreDemo(): Promise<void>;
+  restoreDefaults(): Promise<void>;
   resetStats(): Promise<void>;
 }
 
@@ -38,16 +38,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     (async () => {
       const s = await openStorage();
-      // Fictional demo seeded once; the user may delete it.
-      if (!(await s.getMeta<boolean>('demoSeeded'))) {
-        await s.putSpots([...DEMO_SPOTS]);
-        await s.setMeta('demoSeeded', true);
-        await s.setMeta('demoVersion', DEMO_VERSION);
-      } else if ((await s.getMeta<number>('demoVersion')) !== DEMO_VERSION) {
-        // Refresh stored demo copies (e.g. after translation) without restoring deleted ones.
-        const kept = new Set((await s.getSpots()).filter(isDemoSpot).map((x) => x.id));
-        await s.putSpots(DEMO_SPOTS.filter((d) => kept.has(d.id)));
-        await s.setMeta('demoVersion', DEMO_VERSION);
+      // The fictional Chen demo of earlier versions is replaced by the bundled estimated ranges.
+      const legacyDemo = (await s.getSpots()).filter((x) => x.verification === 'demo').map((x) => x.id);
+      if (legacyDemo.length) await s.deleteSpots(legacyDemo);
+      // Default ranges seeded once; the user may delete them.
+      if (!(await s.getMeta<boolean>('defaultsSeeded'))) {
+        await s.putSpots([...BUNDLED_SPOTS]);
+        await s.setMeta('defaultsSeeded', true);
+        await s.setMeta('defaultsVersion', BUNDLED_VERSION);
+      } else if ((await s.getMeta<string>('defaultsVersion')) !== BUNDLED_VERSION) {
+        // Refresh stored default copies after a pack rebuild without restoring deleted ones.
+        const kept = new Set((await s.getSpots()).filter(isBundledSpot).map((x) => x.id));
+        await s.deleteSpots([...kept].filter((id) => !BUNDLED_SPOTS.some((b) => b.id === id)));
+        await s.putSpots(BUNDLED_SPOTS.filter((b) => kept.has(b.id)));
+        await s.setMeta('defaultsVersion', BUNDLED_VERSION);
       }
       const [sp, an, sr] = await Promise.all([s.getSpots(), s.getAnswers(), s.getSrs()]);
       if (cancelled) return;
@@ -115,7 +119,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setSrs((cur) => cur.filter((i) => !ids.includes(i.spotId)));
   }, [srs]);
 
-  const restoreDemo = useCallback(() => saveSpots([...DEMO_SPOTS]), [saveSpots]);
+  const restoreDefaults = useCallback(() => saveSpots([...BUNDLED_SPOTS]), [saveSpots]);
 
   const resetStats = useCallback(async () => {
     await db.current?.clearStats();
@@ -124,7 +128,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value: Store = {
-    ready, persistent, spots, answers, srs, sessionId, spotById, recordAnswer, saveSpots, deleteSpots, restoreDemo, resetStats,
+    ready, persistent, spots, answers, srs, sessionId, spotById, recordAnswer, saveSpots, deleteSpots, restoreDefaults, resetStats,
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

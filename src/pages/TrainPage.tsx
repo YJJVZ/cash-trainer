@@ -19,7 +19,7 @@ import { analyzeSpot } from '../ranges/analysis';
 import { checkConsistency } from '../ranges/consistency';
 import { trainingSpots } from '../ranges/coverage';
 import { describeHistory, potBeforeHero, shortName } from '../ranges/describe';
-import { isDemoSpot } from '../ranges/demo/demoRanges';
+import { isBundledSpot } from '../ranges/bundled';
 import { FAMILY_LABELS, type RangeSpot } from '../ranges/types';
 import { useStore } from '../state/store';
 import { MAX_BOX, dueItems } from '../stats/srs';
@@ -62,7 +62,7 @@ export function TrainPage() {
   const [review, setReview] = useState<Question[] | null>(initialReview ? initialReview.slice(1) : null);
   const [notice, setNotice] = useState<string | null>(null);
 
-  const pool = useMemo(() => eligibleSpots(trainingSpots(spots, config.showCoveredDemos), config), [spots, config]);
+  const pool = useMemo(() => eligibleSpots(trainingSpots(spots, config.showCoveredDefaults), config), [spots, config]);
   const warnings = useMemo(() => checkConsistency(pool), [pool]);
 
   const draw = useCallback(
@@ -206,7 +206,7 @@ export function TrainPage() {
                 <div className="ml-auto flex gap-1.5">
                   {question.origin === 'srs' && <Badge>Repetition</Badge>}
                   {(review || question.origin === 'review') && <Badge>Review{review ? ` · ${review.length} left` : ''}</Badge>}
-                  {isDemoSpot(spot) && <Badge tone="demo">Fictional demo</Badge>}
+                  {isBundledSpot(spot) && <Badge tone="warn">Estimate</Badge>}
                 </div>
               </div>
               {notice && <p className="text-sm text-muted">{notice}</p>}

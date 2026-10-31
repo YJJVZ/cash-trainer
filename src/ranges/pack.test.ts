@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { ALL_HANDS, type HandClass } from '../engine/hands';
 import { POSITIONS, type Position } from '../engine/positions';
-import { coveredDemoIds, trainingSpots } from './coverage';
-import { DEMO_SPOTS } from './demo/demoRanges';
+import { coveredDefaultIds, trainingSpots } from './coverage';
+import { BUNDLED_SPOTS } from './bundled';
 import { editableInPlace, userCopy } from './edit';
 import { exportJson, importJson } from './io';
 import { exportPack, validatePackFile } from './pack';
@@ -237,7 +237,7 @@ describe('v2 pack: rights, export, backward compatibility', () => {
 
   it('importJson accepts v2 packs and v1 libraries', () => {
     expect(importJson(JSON.stringify(file())).spots).toHaveLength(5);
-    expect(importJson(exportJson([...DEMO_SPOTS])).spots).toEqual(DEMO_SPOTS);
+    expect(importJson(exportJson([...BUNDLED_SPOTS])).spots).toEqual(BUNDLED_SPOTS);
   });
 
   it('a v1 snapshot keeps pack provenance and source frequencies', () => {
@@ -258,25 +258,49 @@ describe('v2 pack: rights, export, backward compatibility', () => {
   });
 });
 
-describe('demo spots covered by a real pack', () => {
+describe('default spots covered by an imported pack', () => {
   const pack = validatePackFile(file()).spots;
-  const all = [...DEMO_SPOTS, ...pack];
+  const all = [...BUNDLED_SPOTS, ...pack];
 
   it('are hidden from training by default, nothing is deleted', () => {
-    const hidden = coveredDemoIds(all);
-    expect([...hidden].sort()).toEqual(['demo-btn-rfi', 'demo-btn-rfi-mixed', 'demo-co-rfi', 'demo-hj-rfi', 'demo-sb-rfi', 'demo-utg-rfi']);
+    const hidden = coveredDefaultIds(all);
+    expect([...hidden].sort()).toEqual(['btn', 'co', 'hj', 'sb', 'utg'].map((p) => `estimate-6max-100bb:rfi-${p}`));
     const train = trainingSpots(all);
     expect(train.some((s) => hidden.has(s.id))).toBe(false);
-    expect(train.some((s) => s.id === 'demo-bb-vs-btn')).toBe(true); // not covered: still trained
-    expect(all).toHaveLength(DEMO_SPOTS.length + 5);
+    expect(train.some((s) => s.id === 'estimate-6max-100bb:bb-vs-btn-open')).toBe(true); // not covered: still trained
+    expect(all).toHaveLength(BUNDLED_SPOTS.length + 5);
   });
 
   it('can be shown again with the option', () => {
     expect(trainingSpots(all, true)).toHaveLength(all.length);
   });
 
-  it('nothing is hidden without a real pack', () => {
-    expect(trainingSpots([...DEMO_SPOTS])).toHaveLength(DEMO_SPOTS.length);
+  it('nothing is hidden without an imported pack', () => {
+    expect(trainingSpots([...BUNDLED_SPOTS])).toHaveLength(BUNDLED_SPOTS.length);
+  });
+});
+
+describe('bundled estimated pack', () => {
+  const byId = (id: string) => BUNDLED_SPOTS.find((s) => s.id === `estimate-6max-100bb:${id}`)!;
+  const played = (id: string, actions: string[]) =>
+    ALL_HANDS.filter((h) => actions.some((a) => (byId(id).pack!.sourceHands[h]?.[a] ?? 0) > 0));
+
+  it('covers every family', () => {
+    for (const f of ['RFI', 'VS_OPEN', 'VS_3BET', 'VS_4BET', 'BVB_LIMP']) expect(BUNDLED_SPOTS.some((s) => s.family === f), f).toBe(true);
+  });
+
+  it('facing a 3-bet, only hands the opener raised are provided', () => {
+    expect(Object.keys(byId('utg-vs-bb-3bet').hands).sort()).toEqual(played('rfi-utg', ['raise']).sort());
+  });
+
+  it('facing a 4-bet, only hands the 3-bettor 3-bet are provided', () => {
+    expect(Object.keys(byId('bb-vs-btn-4bet').hands).sort()).toEqual(played('bb-vs-btn-open', ['3bet']).sort());
+  });
+
+  it('SB opens with a limp strategy', () => {
+    expect(byId('rfi-sb').actions.map((a) => a.id)).toEqual(['fold', 'limp', 'raise']);
+    expect(byId('rfi-sb').hands.AA).toEqual({ raise: 1 });
+    expect(byId('rfi-sb').hands.K9o).toEqual({ limp: 1 });
   });
 });
 

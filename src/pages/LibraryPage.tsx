@@ -7,7 +7,7 @@ import { PageHeader } from '../components/Layout';
 import { VerificationBadge } from '../components/SpotMeta';
 import { analyzeSpot } from '../ranges/analysis';
 import { checkConsistency } from '../ranges/consistency';
-import { DEMO_SPOTS } from '../ranges/demo/demoRanges';
+import { BUNDLED_SPOTS } from '../ranges/bundled';
 import { exportCsv, exportJson, importCsv, importJson } from '../ranges/io';
 import { exportPack } from '../ranges/pack';
 import { FAMILY_LABELS, type RangeSpot } from '../ranges/types';
@@ -47,7 +47,7 @@ function Toolbar({ meta, children }: { title?: string; meta?: ReactNode; childre
 
 export function LibraryPage({ embedded = false }: { embedded?: boolean }) {
   const Header = embedded ? Toolbar : PageHeader;
-  const { spots, saveSpots, deleteSpots, restoreDemo } = useStore();
+  const { spots, saveSpots, deleteSpots, restoreDefaults } = useStore();
   const [pending, setPending] = useState<Pending | null>(null);
   const [paste, setPaste] = useState('');
   const [showPaste, setShowPaste] = useState(false);
@@ -55,7 +55,7 @@ export function LibraryPage({ embedded = false }: { embedded?: boolean }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const consistency = useMemo(() => checkConsistency(spots), [spots]);
-  const demoMissing = DEMO_SPOTS.some((d) => !spots.some((s) => s.id === d.id));
+  const defaultsMissing = BUNDLED_SPOTS.some((d) => !spots.some((s) => s.id === d.id));
 
   const onFile = async (file: File) => setPending(parseImport(file.name, await file.text()));
   const exportSel = selected.length ? spots.filter((s) => selected.includes(s.id)) : spots;
@@ -96,7 +96,7 @@ export function LibraryPage({ embedded = false }: { embedded?: boolean }) {
           flush
           actions={
             <>
-              {demoMissing && <Button size="sm" variant="ghost" onClick={() => void restoreDemo()}>Restore demo</Button>}
+              {defaultsMissing && <Button size="sm" variant="ghost" onClick={() => void restoreDefaults()}>Restore defaults</Button>}
               {selected.length > 0 && (confirmDelete ? (
                 <>
                   <Button size="sm" variant="danger" onClick={async () => { await deleteSpots(selected); setSelected([]); setConfirmDelete(false); }}>Confirm delete</Button>
@@ -282,8 +282,8 @@ function FormatHelp() {
         </ul>
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
-        <Button size="sm" onClick={() => downloadText('spot-template.csv', exportCsv(DEMO_SPOTS[0]!), 'text/csv')}>CSV template</Button>
-        <Button size="sm" onClick={() => downloadText('library-template.json', exportJson([DEMO_SPOTS[0]!], 'Template'), 'application/json')}>JSON template</Button>
+        <Button size="sm" onClick={() => downloadText('spot-template.csv', exportCsv(BUNDLED_SPOTS[0]!), 'text/csv')}>CSV template</Button>
+        <Button size="sm" onClick={() => downloadText('library-template.json', exportJson([BUNDLED_SPOTS[0]!], 'Template'), 'application/json')}>JSON template</Button>
       </div>
     </Panel>
   );

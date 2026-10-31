@@ -3,7 +3,9 @@
 Preflop range training for NLHE 6-max cash games, 100 BB effective (reference: PokerStars.com NL10).
 Installable PWA, 100% local (IndexedDB), no backend.
 
-> **The bundled ranges are a FICTIONAL DEMO** generated from the Chen formula and arbitrary thresholds.
+> **The bundled ranges are ESTIMATES**: an approximate synthesis of publicly discussed solver-based 6-max 100 BB
+> strategies (RFI with a SB limp strategy, vs open, vs 3-bet, vs 4-bet, BB vs SB limp), built by
+> `npm run ranges:estimate` from `scripts/build-estimate-pack.mjs`. They are not solver output and not verified.
 > They are not GTO, not solver output and not verified. Import your own ranges (that you have the rights to)
 > through the Library.
 
@@ -35,7 +37,7 @@ The main menu is the hub (game-style): every screen has a single **MENU** button
 | Ranges | `/ranges` | 13×13 grid, per-hand detail, breakdown, spot metadata |
 | Progress | `/stats` | Totals, 14-day activity, accuracy by position / spot / family |
 | My mistakes | `/mistakes` | Replay mistakes, due hands, most missed hands, memory boxes, full mistake history |
-| Settings | `/settings` | Training setup, ranges library (JSON & CSV import/export, validation, proprietary authorization), data (export, reset, restore demo) |
+| Settings | `/settings` | Training setup, ranges library (JSON & CSV import/export, validation, proprietary authorization), data (export, reset, restore defaults) |
 
 `/library` and `/dashboard` redirect to Settings → Ranges and Progress.
 

@@ -1,13 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { ALL_HANDS } from '../engine/hands';
 import { checkConsistency } from './consistency';
-import { DEMO_SPOTS } from './demo/demoRanges';
+import { BUNDLED_SPOTS } from './bundled';
 import { analyzeSpot } from './analysis';
 import { exportCsv, exportJson, importCsv, importJson } from './io';
 import { validateLibrary, validateSpot } from './validation';
 import { SCHEMA_ID, type RangeSpot } from './types';
 
-const base = (): RangeSpot => structuredClone(DEMO_SPOTS.find((s) => s.id === 'demo-btn-rfi')!) as RangeSpot;
+const base = (): RangeSpot => {
+  const { pack: _pack, ...spot } = structuredClone(BUNDLED_SPOTS.find((s) => s.id === 'estimate-6max-100bb:rfi-btn')!) as RangeSpot;
+  return spot;
+};
+/** BTN open with its source (mixed) frequencies, as a Pro spot. */
+const proSpot = (): RangeSpot => ({ ...base(), id: 'pro-btn', mode: 'pro', hands: structuredClone(BUNDLED_SPOTS.find((s) => s.id === 'estimate-6max-100bb:rfi-btn')!.pack!.sourceHands) });
 
 const userSpot = (over: Partial<RangeSpot> = {}): RangeSpot => ({
   ...base(),
@@ -18,25 +23,24 @@ const userSpot = (over: Partial<RangeSpot> = {}): RangeSpot => ({
   ...over,
 });
 
-describe('demo range', () => {
-  it('all demo spots are valid', () => {
-    for (const s of DEMO_SPOTS) {
+describe('bundled default ranges', () => {
+  it('all default spots are valid', () => {
+    for (const s of BUNDLED_SPOTS) {
       const r = validateSpot(s);
       expect(r.errors, s.id).toEqual([]);
     }
   });
 
-  it('all demo spots are explicitly marked as fictional', () => {
-    for (const s of DEMO_SPOTS) {
-      expect(s.verification).toBe('demo');
-      expect(s.source.kind).toBe('demo');
-      expect(s.name).toMatch(/DEMO/);
-      expect(s.source.name.toLowerCase()).toContain('fictional');
+  it('are flagged as unverified estimates', () => {
+    for (const s of BUNDLED_SPOTS) {
+      expect(s.verification).toBe('unverified');
+      expect(s.source.kind).toBe('other');
+      expect(s.source.name.toLowerCase()).toContain('estimation');
     }
   });
 
-  it('demo ids are unique', () => {
-    expect(new Set(DEMO_SPOTS.map((s) => s.id)).size).toBe(DEMO_SPOTS.length);
+  it('ids are unique', () => {
+    expect(new Set(BUNDLED_SPOTS.map((s) => s.id)).size).toBe(BUNDLED_SPOTS.length);
   });
 });
 
@@ -114,7 +118,7 @@ describe('spot validation', () => {
   });
 
   it('forbids marking a demo source as verified', () => {
-    expect(validateSpot({ ...base(), verification: 'verified' }).spot).toBeNull();
+    expect(validateSpot({ ...base(), source: { kind: 'demo', name: 'Demo', proprietary: false }, verification: 'verified' }).spot).toBeNull();
     expect(validateSpot({ ...userSpot(), verification: 'demo' }).spot).toBeNull();
   });
 
@@ -149,9 +153,9 @@ describe('library', () => {
 
 describe('import / export', () => {
   it('lossless JSON round trip', () => {
-    const r = importJson(exportJson([...DEMO_SPOTS]));
+    const r = importJson(exportJson([...BUNDLED_SPOTS]));
     expect(r.errors).toEqual([]);
-    expect(r.spots).toEqual(DEMO_SPOTS);
+    expect(r.spots).toEqual(BUNDLED_SPOTS);
   });
 
   it('unreadable JSON → clear error', () => {
@@ -159,7 +163,7 @@ describe('import / export', () => {
   });
 
   it('lossless CSV round trip, including missing hands', () => {
-    const s = structuredClone(DEMO_SPOTS.find((x) => x.id === 'demo-btn-vs-bb-3bet')!) as RangeSpot;
+    const { pack: _pack, ...s } = structuredClone(BUNDLED_SPOTS.find((x) => x.id === 'estimate-6max-100bb:btn-vs-bb-3bet')!) as RangeSpot;
     const r = importCsv(exportCsv(s));
     expect(r.errors).toEqual([]);
     expect(r.spot).toEqual(s);
@@ -176,7 +180,7 @@ describe('import / export', () => {
   });
 
   it('CSV: accepts semicolons and decimal commas', () => {
-    const s = structuredClone(DEMO_SPOTS.find((x) => x.mode === 'pro')!) as RangeSpot;
+    const s = proSpot();
     const csv = exportCsv(s)
       .split('\n')
       .map((l) => (l.startsWith('#meta') ? l.replace(/^#meta,/, '#meta;') : l.replace(/,/g, ';').replace(/(\d)\.(\d)/g, '$1,$2')))
@@ -200,8 +204,13 @@ describe('import / export', () => {
 });
 
 describe('cross-spot consistency', () => {
-  it('no warning for the demo alone', () => {
-    expect(checkConsistency([...DEMO_SPOTS])).toEqual([]);
+  it('no warning for the bundled pack alone', () => {
+    expect(checkConsistency([...BUNDLED_SPOTS])).toEqual([]);
+  });
+
+  it('flags fictional demo spots mixed with real ranges', () => {
+    const demo = userSpot({ id: 'old-demo', verification: 'demo', source: { kind: 'demo', name: 'Old demo', proprietary: false } });
+    expect(checkConsistency([demo, userSpot()]).map((w) => w.kind)).toContain('demo-mix');
   });
 
   it('flags different sizings, rakes and depths', () => {
@@ -211,6 +220,6 @@ describe('cross-spot consistency', () => {
       format: { ...base().format, stackBb: 200 },
     });
     const kinds = checkConsistency([base(), other]).map((w) => w.kind);
-    expect(kinds).toEqual(expect.arrayContaining(['sizing', 'rake', 'stack', 'demo-mix']));
+    expect(kinds).toEqual(expect.arrayContaining(['sizing', 'rake', 'stack']));
   });
 });

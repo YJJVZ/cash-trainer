@@ -1,5 +1,4 @@
 import { ALL_HANDS, type HandClass } from '../engine/hands';
-import { isDemoSpot } from './demo/demoRanges';
 import type { RangeSpot } from './types';
 
 /**
@@ -51,5 +50,5 @@ export function userCopy(spot: RangeSpot, taken: ReadonlySet<string>): RangeSpot
 
 /** Can this spot be edited in place? Demo and pack spots are always copied first. */
 export function editableInPlace(spot: RangeSpot): boolean {
-  return !isDemoSpot(spot) && !spot.pack;
+  return spot.verification !== 'demo' && !spot.pack;
 }

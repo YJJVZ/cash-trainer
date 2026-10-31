@@ -9,7 +9,7 @@ import { Tabs } from '../components/Tabs';
 import { combosPerKind, handKind, type HandClass } from '../engine/hands';
 import { POSITIONS } from '../engine/positions';
 import { analyzeSpot } from '../ranges/analysis';
-import { isDemoSpot } from '../ranges/demo/demoRanges';
+import { isBundledSpot } from '../ranges/bundled';
 import { editableInPlace } from '../ranges/edit';
 import { FAMILY_LABELS, SPOT_FAMILIES, type RangeSpot, type SpotFamily } from '../ranges/types';
 import { validateSpot } from '../ranges/validation';
@@ -82,7 +82,8 @@ function SpotPicker({ spots, value, onChange }: { spots: RangeSpot[]; value: Ran
     <div className="flex flex-wrap gap-1.5" role="listbox" aria-label="Spots">
       {ordered.map((s) => {
         const on = s.id === value.id;
-        const others = ordered.filter((o) => o.hero === s.hero).length > 1;
+        // Same situation from several sources: show where each one comes from.
+        const others = ordered.filter((o) => o.hero === s.hero && o.villains.join() === s.villains.join()).length > 1;
         return (
           <button
             key={s.id}
@@ -97,7 +98,7 @@ function SpotPicker({ spots, value, onChange }: { spots: RangeSpot[]; value: Ran
           >
             {s.hero}
             {s.villains.length === 1 && s.family !== 'RFI' ? <span className="text-faint"> v {s.villains[0]}</span> : null}
-            {others ? <span className="text-faint"> · {s.mode === 'pro' ? 'mixed' : isDemoSpot(s) ? 'demo' : s.source.name.slice(0, 16)}</span> : null}
+            {others ? <span className="text-faint"> · {s.mode === 'pro' ? 'mixed' : isBundledSpot(s) ? 'estimate' : s.source.name.slice(0, 16)}</span> : null}
           </button>
         );
       })}

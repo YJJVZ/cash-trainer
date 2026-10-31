@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { handClassOf } from '../engine/hands';
 import { seededRng } from '../engine/random';
-import { DEMO_SPOTS } from '../ranges/demo/demoRanges';
+import { BUNDLED_SPOTS } from '../ranges/bundled';
 import type { RangeSpot } from '../ranges/types';
 import {
   buildReviewQueue, definedHands, drawNext, drawRandomQuestion, eligibleSpots, evaluateAnswer, questionFor, type QuizFilter,
@@ -9,34 +9,35 @@ import {
 import { explain, neighbours } from './explain';
 import { proPolicy, standardPolicy } from './scoring';
 
-const spots = [...DEMO_SPOTS];
+const spots = [...BUNDLED_SPOTS];
 const all: QuizFilter = { families: ['RFI', 'VS_OPEN', 'VS_3BET', 'VS_4BET', 'BVB_LIMP'], heroes: ['UTG', 'HJ', 'CO', 'BTN', 'SB', 'BB'] };
 const byId = (id: string) => spots.find((s) => s.id === id)!;
 
 describe('spot selection', () => {
   it('filters by family and position', () => {
     const r = eligibleSpots(spots, { families: ['RFI'], heroes: ['BTN'] });
-    expect(r.map((s) => s.id)).toEqual(['demo-btn-rfi']);
+    expect(r.map((s) => s.id)).toEqual(['estimate-6max-100bb:rfi-btn']);
   });
 
   it('excludes Pro spots from the Standard quiz', () => {
-    expect(eligibleSpots(spots, all).some((s) => s.mode === 'pro')).toBe(false);
-    expect(eligibleSpots(spots, all, 'pro').every((s) => s.mode === 'pro')).toBe(true);
+    const pro: RangeSpot = { ...byId('estimate-6max-100bb:rfi-btn'), id: 'pro', mode: 'pro', hands: byId('estimate-6max-100bb:rfi-btn').pack!.sourceHands };
+    expect(eligibleSpots([...spots, pro], all).some((s) => s.mode === 'pro')).toBe(false);
+    expect(eligibleSpots([...spots, pro], all, 'pro').map((s) => s.id)).toEqual(['pro']);
   });
 
   it('excludes spots with no provided hand', () => {
-    const empty: RangeSpot = { ...byId('demo-btn-rfi'), id: 'empty', hands: {} };
+    const empty: RangeSpot = { ...byId('estimate-6max-100bb:rfi-btn'), id: 'empty', hands: {} };
     expect(eligibleSpots([empty], all)).toEqual([]);
   });
 
   it('can restrict to a list of spots', () => {
-    expect(eligibleSpots(spots, { ...all, spotIds: ['demo-bb-vs-btn'] })).toHaveLength(1);
+    expect(eligibleSpots(spots, { ...all, spotIds: ['estimate-6max-100bb:bb-vs-btn-open'] })).toHaveLength(1);
   });
 });
 
 describe('dealing hands', () => {
   it('never deals a hand that is not provided', () => {
-    const partial = byId('demo-btn-vs-bb-3bet');
+    const partial = byId('estimate-6max-100bb:btn-vs-bb-3bet');
     const defined = new Set(definedHands(partial));
     expect(defined.size).toBeLessThan(169);
     const rng = seededRng(1);
@@ -62,7 +63,7 @@ describe('dealing hands', () => {
 
   it('weights by combo count (≈ 6/1326 for a given pair)', () => {
     const rng = seededRng(3);
-    const spot = byId('demo-utg-rfi');
+    const spot = byId('estimate-6max-100bb:rfi-utg');
     let offsuit = 0;
     const n = 20000;
     for (let i = 0; i < n; i++) if (drawRandomQuestion([spot], rng).hand.endsWith('o')) offsuit++;
@@ -71,18 +72,18 @@ describe('dealing hands', () => {
   });
 
   it('refuses to build a question on a missing hand', () => {
-    expect(() => questionFor(byId('demo-btn-vs-bb-3bet'), '72o', seededRng(1))).toThrow(/not provided/);
+    expect(() => questionFor(byId('estimate-6max-100bb:btn-vs-bb-3bet'), '72o', seededRng(1))).toThrow(/not provided/);
   });
 
   it('draws due spaced-repetition items and skips unplayable ones', () => {
-    const due = [{ spotId: 'demo-bb-vs-btn', hand: 'K9o' }, { spotId: 'demo-btn-vs-bb-3bet', hand: '72o' }];
+    const due = [{ spotId: 'estimate-6max-100bb:bb-vs-btn-open', hand: 'K9o' }, { spotId: 'estimate-6max-100bb:btn-vs-bb-3bet', hand: '72o' }];
     const q = drawNext(spots, { rng: seededRng(5), due, srsRatio: 1 });
     expect(q.origin).toBe('srs');
     expect(q.hand).toBe('K9o');
   });
 
   it('avoids asking the same hand twice in a row', () => {
-    const due = [{ spotId: 'demo-bb-vs-btn', hand: 'K9o' }];
+    const due = [{ spotId: 'estimate-6max-100bb:bb-vs-btn-open', hand: 'K9o' }];
     const q = drawNext(spots, { rng: seededRng(5), due, srsRatio: 1, previous: due[0] });
     expect(q.origin).toBe('random');
   });
@@ -90,15 +91,15 @@ describe('dealing hands', () => {
 
 describe('correction', () => {
   it('Standard: correct only for the range action', () => {
-    const s = byId('demo-utg-rfi');
+    const s = byId('estimate-6max-100bb:rfi-utg');
     expect(evaluateAnswer(s, 'AA', 'raise').verdict).toBe('correct');
     expect(evaluateAnswer(s, 'AA', 'fold').verdict).toBe('wrong');
     expect(evaluateAnswer(s, '72o', 'fold').verdict).toBe('correct');
   });
 
   it('rejects an illegal action or a missing hand', () => {
-    expect(() => evaluateAnswer(byId('demo-utg-rfi'), 'AA', 'call')).toThrow(/Illegal/);
-    expect(() => evaluateAnswer(byId('demo-btn-vs-bb-3bet'), '72o', 'fold')).toThrow(/not provided/);
+    expect(() => evaluateAnswer(byId('estimate-6max-100bb:rfi-utg'), 'AA', 'call')).toThrow(/Illegal/);
+    expect(() => evaluateAnswer(byId('estimate-6max-100bb:btn-vs-bb-3bet'), '72o', 'fold')).toThrow(/not provided/);
   });
 
   it('scoring policies with mixed frequencies (Pro mode groundwork)', () => {
@@ -113,12 +114,12 @@ describe('correction', () => {
 
 describe('explanations', () => {
   it('describe the situation, the answer and the source', () => {
-    const s = byId('demo-bb-vs-btn');
+    const s = byId('estimate-6max-100bb:bb-vs-btn-open');
     const ev = evaluateAnswer(s, 'AA', 'call');
     const text = explain(s, 'AA', ev).join('\n');
     expect(text).toMatch(/BTN open 2.5 BB/);
     expect(text).toMatch(/3-bet/);
-    expect(text).toMatch(/Fictional demo/);
+    expect(text).toMatch(/Estimation/);
   });
 
   it('computes neighbouring hands', () => {
@@ -132,11 +133,11 @@ describe('explanations', () => {
 describe('mistake review', () => {
   it('deduplicates and skips unplayable hands', () => {
     const mistakes = [
-      { spotId: 'demo-utg-rfi', hand: 'A5s' },
-      { spotId: 'demo-utg-rfi', hand: 'A5s' },
-      { spotId: 'demo-bb-vs-btn', hand: 'K9o' },
+      { spotId: 'estimate-6max-100bb:rfi-utg', hand: 'A5s' },
+      { spotId: 'estimate-6max-100bb:rfi-utg', hand: 'A5s' },
+      { spotId: 'estimate-6max-100bb:bb-vs-btn-open', hand: 'K9o' },
       { spotId: 'inconnu', hand: 'AA' },
-      { spotId: 'demo-btn-vs-bb-3bet', hand: '72o' },
+      { spotId: 'estimate-6max-100bb:btn-vs-bb-3bet', hand: '72o' },
     ];
     const q = buildReviewQueue(mistakes, spots, seededRng(9));
     expect(q).toHaveLength(2);

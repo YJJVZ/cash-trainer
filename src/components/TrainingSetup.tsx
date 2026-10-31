@@ -7,8 +7,8 @@ export interface TrainingConfig {
   families: SpotFamily[];
   heroes: Position[];
   srs: boolean;
-  /** Show demo spots even when a real range pack covers the same situation (default: hidden). */
-  showCoveredDemos?: boolean;
+  /** Show default spots even when an imported range pack covers the same situation (default: hidden). */
+  showCoveredDefaults?: boolean;
 }
 
 export const DEFAULT_TRAINING_CONFIG: TrainingConfig = { families: ['RFI', 'VS_OPEN'], heroes: [...POSITIONS], srs: true };
@@ -31,9 +31,9 @@ export function TrainingSetupForm({ config, onChange }: { config: TrainingConfig
         Mix in hands due for spaced repetition (≈ 30% of questions)
       </label>
       <label className="flex items-center gap-3 text-sm text-muted min-h-11">
-        <input type="checkbox" className="accent-[var(--color-brand)] w-4 h-4" checked={!!config.showCoveredDemos}
-          onChange={(e) => onChange({ ...config, showCoveredDemos: e.target.checked })} />
-        Also train demo spots already covered by a real range pack
+        <input type="checkbox" className="accent-[var(--color-brand)] w-4 h-4" checked={!!config.showCoveredDefaults}
+          onChange={(e) => onChange({ ...config, showCoveredDefaults: e.target.checked })} />
+        Also train default spots already covered by an imported range pack
       </label>
     </div>
   );

@@ -118,7 +118,7 @@ function Editor({ original, takenIds }: { original: RangeSpot; takenIds: Set<str
         <div className="space-y-4 min-w-0">
           {isCopy && (
             <p className="text-sm text-muted rounded-card border border-border bg-surface px-4 py-2.5">
-              Demo spots are never modified: you are editing <span className="text-text">your own copy</span>, saved as a new unverified spot.
+              Default and imported pack spots are never modified: you are editing <span className="text-text">your own copy</span>, saved as a new unverified spot.
             </p>
           )}
 
