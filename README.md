@@ -33,6 +33,7 @@ The main menu is the hub (game-style): every screen has a single **MENU** button
 | Screen | Route | Purpose |
 |---|---|---|
 | Main menu | `/` | PLAY, Ranges, Progress, My mistakes, Settings, progress preview |
+| Read the range | `/guess` | A villain opens from a position: paint the range you put them on, then compare (match %, missed and too-wide hands) |
 | Play | `/train` | Visual 6-max table (seats, actions, chips, dealer button, pot), dealt cards, big action buttons (`1`…`n`), verdict, explanation, revealed range, session mistakes review. `?review=due` / `?review=mistakes` start a review queue |
 | Ranges | `/ranges` | 13×13 grid, per-hand detail, breakdown, spot metadata |
 | Progress | `/stats` | Totals, 14-day activity, accuracy by position / spot / family |

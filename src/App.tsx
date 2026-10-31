@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { useStore } from './state/store';
+import { GuessPage } from './pages/GuessPage';
 import { MainMenuPage } from './pages/MainMenuPage';
 import { MistakesPage } from './pages/MistakesPage';
 import { RangeEditorPage } from './pages/RangeEditorPage';
@@ -17,6 +18,7 @@ export function App() {
       <Route index element={<MainMenuPage />} />
       <Route element={<Layout />}>
         <Route path="train" element={<TrainPage />} />
+        <Route path="guess" element={<GuessPage />} />
         <Route path="ranges" element={<RangesPage />} />
         <Route path="ranges/edit/:id" element={<RangeEditorPage />} />
         <Route path="stats" element={<StatsPage />} />

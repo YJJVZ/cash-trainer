@@ -84,13 +84,15 @@ export function MainMenuPage() {
             <div className="menu-in" style={stagger(1)}>
               <PlayButton to="/train" hint={<span className="hidden sm:inline num">↵ Enter</span>} />
             </div>
+            <MenuButton className="menu-in" style={stagger(2)} to="/guess" icon="eye" label="Read the range"
+              detail="A villain opens: paint the range you put them on" />
             <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-2.5">
-              <MenuButton className="menu-in" style={stagger(2)} to="/ranges" icon="grid" label="Ranges" detail={`${spots.length} spots`} />
-              <MenuButton className="menu-in" style={stagger(3)} to="/stats" icon="stats" label="Progress"
+              <MenuButton className="menu-in" style={stagger(3)} to="/ranges" icon="grid" label="Ranges" detail={`${spots.length} spots`} />
+              <MenuButton className="menu-in" style={stagger(4)} to="/stats" icon="stats" label="Progress"
                 detail={total.total ? `${Math.round(total.accuracy * 100)}% accuracy` : 'No hands played yet'} />
-              <MenuButton className="menu-in" style={stagger(4)} to="/mistakes" icon="target" label="My mistakes"
+              <MenuButton className="menu-in" style={stagger(5)} to="/mistakes" icon="target" label="My mistakes"
                 detail={toRework ? `${toRework} hand${toRework > 1 ? 's' : ''} to work on` : 'Nothing to review'} badge={due} />
-              <MenuButton className="menu-in" style={stagger(5)} to="/settings" icon="settings" label="Settings" detail="Ranges, import, data" />
+              <MenuButton className="menu-in" style={stagger(6)} to="/settings" icon="settings" label="Settings" detail="Ranges, import, data" />
             </div>
           </nav>
 
@@ -98,7 +100,7 @@ export function MainMenuPage() {
           <Link
             to="/stats"
             className="menu-in group mt-8 [@media(max-height:780px)]:mt-5 grid grid-cols-3 border-t border-border pt-4 hover:border-border-strong transition-colors"
-            style={stagger(6)}
+            style={stagger(7)}
             aria-label="View detailed progress"
           >
             {[
@@ -117,7 +119,7 @@ export function MainMenuPage() {
           </Link>
         </main>
 
-        <footer className="menu-in w-full max-w-[440px] mx-auto text-center text-xs text-faint" style={stagger(7)}>
+        <footer className="menu-in w-full max-w-[440px] mx-auto text-center text-xs text-faint" style={stagger(8)}>
           {defaultsOnly ? (
             <p>
               <span className="text-warn">Estimated default ranges.</span>{' '}

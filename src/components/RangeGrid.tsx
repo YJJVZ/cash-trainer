@@ -15,11 +15,13 @@ export interface RangeGridProps {
   onHover?: (hand: HandClass | undefined) => void;
   /** Paint mode: called for every cell touched while the pointer is down (tap or drag). */
   onPaint?: (hand: HandClass) => void;
+  /** Overrides the color of each action id (default: by action kind). */
+  colors?: Record<string, string>;
   className?: string;
 }
 
-function RangeGridImpl({ spot, highlight, masked, selected, onSelect, onHover, onPaint, className }: RangeGridProps) {
-  const colors = spotColors(spot);
+function RangeGridImpl({ spot, highlight, masked, selected, onSelect, onHover, onPaint, colors: colorOverride, className }: RangeGridProps) {
+  const colors = colorOverride ?? spotColors(spot);
   const interactive = !!onSelect;
   const painting = useRef(false);
   const last = useRef<string | null>(null);
